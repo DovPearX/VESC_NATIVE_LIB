@@ -1,0 +1,6 @@
+[submodule "vesc_pkg"]
+	path = vesc_pkg
+	url = https://github.com/vedderb/vesc_pkg.git
+[submodule "bldc"]
+	path = bldc
+	url = https://github.com/vedderb/bldc.git
