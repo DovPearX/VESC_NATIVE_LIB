@@ -1,0 +1,13 @@
+*.list
+*.vescpkg
+confxml.c
+confxml.h
+
+*.elf
+*.o
+*.obj
+*.so
+*.rcc
+*.cproject
+*.project
+*.settings
