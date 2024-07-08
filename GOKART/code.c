@@ -30,7 +30,9 @@ typedef struct {
 	State state;
 
     // Runtime values grouped for easy access in ancillary functions
-	RuntimeData rt; 		// pitch_angle proportional pid_value setpoint current_time roll_angle  last_accel_z  accel[3
+	RuntimeData rt; 		// pitch_angle proportional pid_value setpoint current_time roll_angle  last_accel_z  accel[3]
+
+    int rpm;
 } data;
 
 static void thd(void *arg) {
