@@ -2,6 +2,7 @@
 
 #include "datatypes.h"
 #include "utils.h"
+#include "buffer.h"
 #include "motor_data.h"
 #include "traction.h"
 
@@ -95,7 +96,7 @@ static void thd(void *arg)
 {
     data *d = (data*)arg;
     
-    //configure(d);
+    configure(d);
 
     while (!VESC_IF->should_terminate()) {
 
@@ -120,6 +121,22 @@ static float app_get_debug(int index) {
     data *d = (data *) ARG;
 
     switch (index) {
+    // case (1):
+    //     return d->current_time;
+    // case (2):
+    //     return d->gyroxyz[0];
+    // case (3):
+    //     return d->gyroxyz[1];
+    // case (4):
+    //     return d->gyroxyz[2];
+    // case (5):
+    //     return d->accelxyz[0];
+    // case (6):
+    //     return d->accelxyz[1];
+    // case (7):
+    //     return d->accelxyz[2];
+
+
     case (1):
         return d->current_time;
     case (2):
@@ -134,6 +151,8 @@ static float app_get_debug(int index) {
         return d->accelxyz[1];
     case (7):
         return d->accelxyz[2];
+
+
     default:
         return 0;
     }

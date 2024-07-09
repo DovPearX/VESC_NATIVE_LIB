@@ -6,6 +6,26 @@
         "exception": "c",
         "*.def": "c",
         "ranges": "c",
-        "traction.h": "c"
+        "traction.h": "c",
+        "any": "c",
+        "codecvt": "c",
+        "condition_variable": "c",
+        "cstddef": "c",
+        "forward_list": "c",
+        "list": "c",
+        "string": "c",
+        "optional": "c",
+        "rope": "c",
+        "future": "c",
+        "limits": "c",
+        "memory": "c",
+        "new": "c",
+        "functional": "c",
+        "regex": "c",
+        "barrier": "c",
+        "bit": "c",
+        "charconv": "c",
+        "compare": "c",
+        "mutex": "c"
     }
 }
