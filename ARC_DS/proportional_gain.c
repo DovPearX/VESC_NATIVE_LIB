@@ -47,7 +47,7 @@ float angle_kp_select(float angle, const KpArray *k) {
 	return kp_mod;
 }
 
-void pitch_kp_configure(const tnt_config *config, KpArray *k, int mode){
+void pitch_kp_configure(const math_config *config, KpArray *k, int mode){
 	float pitch_current[7][2] = { //Accel curve
 	{0, 0}, //reserved for kp0 assigned at the end
 	{config->pitch1, config->current1},
@@ -113,7 +113,7 @@ void angle_kp_reset(KpArray *k) {
 	k->count = 0;
 }
 
-void roll_kp_configure(const tnt_config *config, KpArray *k, int mode){
+void roll_kp_configure(const math_config *config, KpArray *k, int mode){
 	float accel_roll_kp[7][2] = { //Accel curve
 	{0, 0}, 
 	{config->roll1, config->roll_kp1},
@@ -149,7 +149,7 @@ void roll_kp_configure(const tnt_config *config, KpArray *k, int mode){
 	} else {k->count = 0;}
 }
 
-void yaw_kp_configure(const tnt_config *config, KpArray *k, int mode){
+void yaw_kp_configure(const math_config *config, KpArray *k, int mode){
 	float accel_yaw_kp[7][2] = { //Accel curve
 	{0, 0}, 
 	{config->yaw1 / config->hertz, config->yaw_kp1},

@@ -19,7 +19,7 @@
 #include <math.h>
 #include "utils.h"
 
-void check_traction(MotorData *m, TractionData *traction, State *state, RuntimeData *rt, tnt_config *config, TractionDebug *traction_dbg){
+void check_traction(MotorData *m, TractionData *traction, State *state, RuntimeData *rt, math_config *config, TractionDebug *traction_dbg){
 	float erpmfactor = fmaxf(1, lerp(0, config->wheelslip_scaleerpm, config->wheelslip_scaleaccel, 1, m->abs_erpm));
 	bool start_condition1 = false;
 	
@@ -118,7 +118,7 @@ void deactivate_traction(TractionData *traction, State *state, RuntimeData *rt, 
 	traction_dbg->debug8 = traction->timeroff - traction->timeron;
 }
 
-void configure_traction(TractionData *traction, tnt_config *config, TractionDebug *traction_dbg){
+void configure_traction(TractionData *traction, math_config *config, TractionDebug *traction_dbg){
 	traction->start_accel = 1000.0 * config->wheelslip_accelstart / config->hertz; //convert from erpm/ms to erpm/cycle
 	traction->slowed_accel = 1000.0 * config->wheelslip_accelend / config->hertz;
 	traction_dbg->freq_factor = 1000.0 / config->hertz;

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "conf/datatypes.h"
+#include "datatypes.h"
 
 typedef struct {
 	float P00, P01, P10, P11, bias;
@@ -25,5 +25,5 @@ typedef struct {
 } KalmanFilter;
 
 void apply_kalman(float in, float in_rate, float *out, float dt, KalmanFilter *k);
-void configure_kalman(const tnt_config *config, KalmanFilter *k);
+void configure_kalman(const math_config *config, KalmanFilter *k);
 void reset_kalman(KalmanFilter *k);

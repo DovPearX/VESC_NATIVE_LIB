@@ -55,7 +55,7 @@ void apply_kalman(float in, float in_rate, float *out, float dt, KalmanFilter *k
 	k->P11 -= K1 * P01_temp;
 }
 
-void configure_kalman(const tnt_config *config, KalmanFilter *k) {
+void configure_kalman(const math_config *config, KalmanFilter *k) {
 	k->Q_angle = config->kalman_factor1/10000;
 	k->Q_bias = config->kalman_factor2/10000;
 	k->R_measure = config->kalman_factor3/100000;
