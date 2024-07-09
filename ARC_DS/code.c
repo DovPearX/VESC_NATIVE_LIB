@@ -6,6 +6,7 @@
 #include "motor_data.h"
 #include "proportional_gain.h"
 #include "traction.h"
+#include "kalman.h"
 
 HEADER
 
@@ -17,11 +18,18 @@ typedef struct {
 
     MotorData motor;
 
+    float motor_timeout_s;
+
     // Runtime values grouped for easy access in ancillary functions
 	RuntimeData rt; // pitch_angle proportional pid_value setpoint current_time roll_angle  last_accel_z  accel[3]
 
     // Rumtime state values
 	State state;
+
+    // Kalman Filter
+	KalmanFilter pitch_kalman; 
+	float pitch_smooth_kalman;
+	float diff_time, last_time;
 
     //Config values
     float mc_current_max, mc_current_min;
@@ -51,18 +59,6 @@ typedef struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void thd(void *arg) 
-{
-    data *d = (data*)arg;
-
-    while (!VESC_IF->should_terminate()) {
-
-        VESC_IF->sleep_ms(1000);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void configure(data *d) 
 {
     
@@ -80,6 +76,9 @@ static void configure(data *d)
 
     //Motor Data Configure
 	motor_data_configure(&d->motor, 3.0 / d->config.hertz);
+
+    //Pitch Kalman Configure
+	configure_kalman(&d->config, &d->pitch_kalman);
 
     //initialize current and pitch arrays for acceleration
 	angle_kp_reset(&d->accel_kp);
@@ -110,15 +109,71 @@ static void reset_vars(data *d)
 {
     motor_data_reset(&d->motor);
 
+    // Traction Control
+	reset_traction(&d->traction, &d->state);
+
     //Low pass pitch filter
 	d->prop_smooth = 0;
 	d->abs_prop_smooth = 0;
 	d->pitch_smooth = d->rt.pitch_angle;
 	biquad_reset(&d->pitch_biquad);
 
-    // Traction Control
-	reset_traction(&d->traction, &d->state);
+    //Kalman filter
+	reset_kalman(&d->pitch_kalman);
+	d->pitch_smooth_kalman = d->rt.pitch_angle;
+}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void set_current(data *d, float current) {
+    VESC_IF->timeout_reset();
+    VESC_IF->mc_set_current_off_delay(d->motor_timeout_s);
+    VESC_IF->mc_set_current(current);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void set_dutycycle(data *d, float dutycycle){
+	// Limit duty output to configured max output
+	if (dutycycle >  VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
+		dutycycle = VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
+	} else if(dutycycle < 0 && dutycycle < -VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
+		dutycycle = -VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
+	}
+	
+	VESC_IF->timeout_reset();
+	VESC_IF->mc_set_current_off_delay(d->motor_timeout_s);
+	VESC_IF->mc_set_duty(dutycycle); 
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// static void imu_ref_callback(float *acc, float *gyro, float *mag, float dt) {
+// 	UNUSED(mag);
+// 	data *d = (data*)ARG;
+// 	VESC_IF->ahrs_update_mahony_imu(gyro, acc, dt, &d->m_att_ref);
+// }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void thd(void *arg) 
+{
+    data *d = (data*)arg;
+    
+    configure(d);
+
+    while (!VESC_IF->should_terminate()) {
+
+        // Update times
+		d->rt.current_time = VESC_IF->system_time();
+		if (d->last_time == 0) {
+			d->last_time = d->rt.current_time;
+		}
+		d->diff_time = d->rt.current_time - d->last_time;
+		d->last_time = d->rt.current_time;
+
+        VESC_IF->sleep_ms(1000);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
