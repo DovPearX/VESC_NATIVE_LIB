@@ -4,6 +4,8 @@
         "proportional_gain.h": "c",
         "*.tcc": "c",
         "exception": "c",
-        "*.def": "c"
+        "*.def": "c",
+        "ranges": "c",
+        "traction.h": "c"
     }
 }
