@@ -15,27 +15,33 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include "state.h"
+#include "utils.h"
 
-void state_init(State *state, bool disable) {
-    state->state = disable ? STATE_DISABLED : STATE_STARTUP;
-    state->mode = MODE_NORMAL;
-    state->sat = SAT_NONE;
-    state->stop_condition = STOP_NONE;
-    state->charging = false;
-    state->darkride = false;
+#include <math.h>
+
+uint32_t rnd(uint32_t seed) {
+    return seed * 1664525u + 1013904223u;
 }
 
-void state_stop(State *state, StopCondition stop_condition) {
-    state->state = STATE_READY;
-    state->stop_condition = stop_condition;
-    state->wheelslip = false;
-}
-
-void state_engage(State *state) {
-    if (!state->charging) {
-        state->state = STATE_RUNNING;
-        state->sat = SAT_CENTERING;
-        state->stop_condition = STOP_NONE;
+float lerp(float x1, float x2, float y1, float y2, float val){
+    if (x2 - x1 == 0) {
+        return y1;
     }
+    float t= (val - x1)/(x2 - x1);
+    return (y1 * (1 - t) + y2 * t);
+}
+
+void rate_limitf(float *value, float target, float step) {
+    if (fabsf(target - *value) < step) {
+        *value = target;
+    } else if (target - *value > 0) {
+        *value += step;
+    } else {
+        *value -= step;
+    }
+}
+
+float clampf(float value, float min, float max) {
+    const float m = value < min ? min : value;
+    return m > max ? max : m;
 }
