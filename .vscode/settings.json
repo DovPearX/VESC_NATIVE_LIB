@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "motor_data.h": "c",
+        "proportional_gain.h": "c"
+    }
+}
