@@ -148,8 +148,34 @@ static float app_get_debug(int index) {
     case (13):
         return d->motor.current_avg;
     case (14):
-        return;        
+        return d->state.wheelslip;
     case (15):
+        return d->traction.highaccelon;        
+    case (16):
+        return d->traction_dbg.debug1;        
+    case (17):
+        return d->traction_dbg.debug2;
+    case (18):
+        return d->traction_dbg.debug3;        
+    case (19):
+        return d->traction_dbg.debug4;
+    case (20):
+        return d->traction_dbg.debug5;        
+    case (21):
+        return d->traction_dbg.debug6;
+    case (22):
+        return d->traction_dbg.debug7;        
+    case (23):
+        return d->traction_dbg.debug8;
+    case (24):
+        return d->traction_dbg.debug9;        
+    case (25):
+        return d->traction_dbg.aggregate_timer;
+    case (26):
+        return d->traction_dbg.freq_factor;        
+    case (27):
+        return;
+    case (28):
         return;
 
     default:
