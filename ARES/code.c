@@ -85,9 +85,49 @@ static void set_dutycycle(data *d, float dutycycle){
 		dutycycle = -VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
 	}
 	
-	VESC_IF->timeout_reset();
 	VESC_IF->mc_set_current_off_delay(d->motor_timeout_s);
 	VESC_IF->mc_set_duty(dutycycle); 
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+float calculateResultantAcceleration(float accel_x, float accel_y) {
+    return sqrt(accel_x * accel_x + accel_y * accel_y);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void manageVehicleControl(data *d) {
+    const float MAX_ERPM_BASE = 10000;
+    const float SPEED_FACTOR = 0.1;
+    const float ACCEL_FACTOR = 50;
+    const float MAX_GYRO_Y = 5.0;
+    const float MAX_ACCEL = 3.0;
+    const float BRAKE_FORCE = 0.8;
+    const float DUTY_CYCLE_REDUCTION_FACTOR = 0.9;
+
+    float max_erpm_dynamic = MAX_ERPM_BASE + d->motor.acceleration * ACCEL_FACTOR + d->motor.current_avg * SPEED_FACTOR;
+
+    if (d->state.wheelslip > 0) {
+        max_erpm_dynamic *= 0.8;
+    }
+
+    float resultant_acceleration = calculateResultantAcceleration(d->accelxyz[0], d->accelxyz[1]);
+
+    bool isSlipping = (abs(d->gyroxyz[1]) > MAX_GYRO_Y || resultant_acceleration > MAX_ACCEL);
+    
+    if (isSlipping) {
+        set_current(d, BRAKE_FORCE);
+        float new_duty_cycle = d->motor.duty_cycle * DUTY_CYCLE_REDUCTION_FACTOR;
+        set_dutycycle(d, new_duty_cycle);
+    } else {
+        set_current(d, 0);
+        
+        if (d->motor.abs_erpm > max_erpm_dynamic) {
+            float new_duty_cycle = d->motor.duty_cycle * DUTY_CYCLE_REDUCTION_FACTOR;
+            set_dutycycle(d, new_duty_cycle);
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +151,9 @@ static void thd(void *arg)
 		VESC_IF->imu_get_gyro(d->gyroxyz);
 		VESC_IF->imu_get_accel(d->accelxyz);
 
-        VESC_IF->sleep_ms(100);
+        manageVehicleControl(d);
+
+        VESC_IF->sleep_ms(10);
     }
 }
 
