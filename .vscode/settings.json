@@ -26,6 +26,7 @@
         "bit": "c",
         "charconv": "c",
         "compare": "c",
-        "mutex": "c"
+        "mutex": "c",
+        "vesc_c_if.h": "c"
     }
 }

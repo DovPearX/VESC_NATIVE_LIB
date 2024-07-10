@@ -1,10 +1,6 @@
 #include "vesc_c_if.h"
 
 #include "datatypes.h"
-#include "utils.h"
-#include "buffer.h"
-#include "motor_data.h"
-#include "traction.h"
 
 #include <math.h>
 #include <string.h>
@@ -14,80 +10,10 @@ HEADER
 typedef struct {
     lib_thread thread;
 
-    MainData values;
-
-    MotorData motor;
-
-	State state;
-
-	//Traction Control
-	TractionData traction;
-	TractionDebug traction_dbg;
-
-    //Config values
-    float mc_current_max, mc_current_min;
-
-	// Runtime values
-	float gyroxyz[3];
-	float accelxyz[3];
-
-	// Misc
-	float motor_timeout_s;
-	float current_time, diff_time, last_time;
+    RuntimeData rt;
+    State state;
 
 } data;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void configure(data *d) 
-{
-    
-    if (VESC_IF->get_cfg_float(CFG_PARAM_IMU_mahony_kp) > 1) {
-        VESC_IF->set_cfg_float(CFG_PARAM_IMU_mahony_kp, 0.4);
-        VESC_IF->set_cfg_float(CFG_PARAM_IMU_mahony_ki, 0);
-        VESC_IF->set_cfg_float(CFG_PARAM_IMU_accel_confidence_decay, 0.1);
-    }
-
-    d->mc_current_max = VESC_IF->get_cfg_float(CFG_PARAM_l_current_max);
-    d->mc_current_min = fabsf(VESC_IF->get_cfg_float(CFG_PARAM_l_current_min));
-
-    //Motor Data Configure
-	motor_data_configure(&d->motor, 3.0 / d->values.hertz);
-
-	//Traction Configure
-	configure_traction(&d->traction, &d->values, &d->traction_dbg);
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void reset_vars(data *d) 
-{
-    motor_data_reset(&d->motor);
-
-    // Traction Control
-	reset_traction(&d->traction, &d->state);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void set_current(data *d, float current) {
-    VESC_IF->timeout_reset();
-    VESC_IF->mc_set_current_off_delay(d->motor_timeout_s);
-    VESC_IF->mc_set_current(current);
-}
-
-static void set_dutycycle(data *d, float dutycycle){
-	// Limit duty output to configured max output
-	if (dutycycle >  VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
-		dutycycle = VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
-	} else if(dutycycle < 0 && dutycycle < -VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
-		dutycycle = -VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
-	}
-	
-	VESC_IF->mc_set_current_off_delay(d->motor_timeout_s);
-	VESC_IF->mc_set_duty(dutycycle); 
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -101,10 +27,12 @@ void manageVehicleControl(data *d) {
     const float MAX_ERPM_BASE = 10000;
     const float SPEED_FACTOR = 0.1;
     const float ACCEL_FACTOR = 50;
-    const float MAX_GYRO_Y = 5.0;
+    const float MAX_GYRO_Y = 100.0;
     const float MAX_ACCEL = 3.0;
     const float BRAKE_FORCE = 0.8;
     const float DUTY_CYCLE_REDUCTION_FACTOR = 0.9;
+
+    int rpm = VESC_IF->mc_get_rpm();
 
     float max_erpm_dynamic = MAX_ERPM_BASE + d->motor.acceleration * ACCEL_FACTOR + d->motor.current_avg * SPEED_FACTOR;
 
@@ -136,22 +64,19 @@ static void thd(void *arg)
 {
     data *d = (data*)arg;
     
-    configure(d);
 
     while (!VESC_IF->should_terminate()) {
 
         // Update times
-		d->current_time = VESC_IF->system_time();
-		if (d->last_time == 0) {
-			d->last_time = d->current_time;
+		d->rt.current_time = VESC_IF->system_time();
+		if (d->rt.last_time == 0) {
+			d->rt.last_time = d->rt.current_time;
 		}
-		d->diff_time = d->current_time - d->last_time;
-		d->last_time = d->current_time;
+		d->rt.diff_time = d->rt.current_time - d->rt.last_time;
+		d->rt.last_time = d->rt.current_time;
 		
-		VESC_IF->imu_get_gyro(d->gyroxyz);
-		VESC_IF->imu_get_accel(d->accelxyz);
-
-        check_traction(&d->motor, &d->traction, &d->state, &d, &d->values, &d->traction_dbg);
+		VESC_IF->imu_get_gyro(d->rt.gyroxyz);
+		VESC_IF->imu_get_accel(d->rt.accelxyz);
 
         manageVehicleControl(d);
 
@@ -193,34 +118,6 @@ static float app_get_debug(int index) {
         return d->motor.current_avg;
     case (14):
         return d->state.wheelslip;
-    case (15):
-        return d->traction.highaccelon;        
-    case (16):
-        return d->traction_dbg.debug1;        
-    case (17):
-        return d->traction_dbg.debug2;
-    case (18):
-        return d->traction_dbg.debug3;        
-    case (19):
-        return d->traction_dbg.debug4;
-    case (20):
-        return d->traction_dbg.debug5;        
-    case (21):
-        return d->traction_dbg.debug6;
-    case (22):
-        return d->traction_dbg.debug7;        
-    case (23):
-        return d->traction_dbg.debug8;
-    case (24):
-        return d->traction_dbg.debug9;        
-    case (25):
-        return d->traction_dbg.aggregate_timer;
-    case (26):
-        return d->traction_dbg.freq_factor;        
-    case (27):
-        return;
-    case (28):
-        return;
 
     default:
         return 0;
