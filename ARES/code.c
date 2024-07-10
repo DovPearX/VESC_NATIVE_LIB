@@ -121,22 +121,6 @@ static float app_get_debug(int index) {
     data *d = (data *) ARG;
 
     switch (index) {
-    // case (1):
-    //     return d->current_time;
-    // case (2):
-    //     return d->gyroxyz[0];
-    // case (3):
-    //     return d->gyroxyz[1];
-    // case (4):
-    //     return d->gyroxyz[2];
-    // case (5):
-    //     return d->accelxyz[0];
-    // case (6):
-    //     return d->accelxyz[1];
-    // case (7):
-    //     return d->accelxyz[2];
-
-
     case (1):
         return d->current_time;
     case (2):
@@ -151,7 +135,22 @@ static float app_get_debug(int index) {
         return d->accelxyz[1];
     case (7):
         return d->accelxyz[2];
-
+    case (8):
+        return d->motor.duty_cycle;
+    case (9):
+        return d->motor.current;
+    case (10):
+        return d->motor.braking;
+    case (11):
+        return d->motor.abs_erpm; 
+    case (12):
+        return d->motor.acceleration;
+    case (13):
+        return d->motor.current_avg;
+    case (14):
+        return;        
+    case (15):
+        return;
 
     default:
         return 0;
