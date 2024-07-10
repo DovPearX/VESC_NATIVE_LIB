@@ -151,6 +151,8 @@ static void thd(void *arg)
 		VESC_IF->imu_get_gyro(d->gyroxyz);
 		VESC_IF->imu_get_accel(d->accelxyz);
 
+        check_traction(&d->motor, &d->traction, &d->state, &d, &d->values, &d->traction_dbg);
+
         manageVehicleControl(d);
 
         VESC_IF->sleep_ms(10);
