@@ -11,51 +11,39 @@ typedef struct {
     lib_thread thread;
 
     RuntimeData rt;
-    State state;
+
+    int test1;
+    int test2;
+    int test3;
 
 } data;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float calculateResultantAcceleration(float accel_x, float accel_y) {
-    return sqrt(accel_x * accel_x + accel_y * accel_y);
-}
+// Stałe i parametry do dostosowania
+#define FRICTION_COEFFICIENT 0.1  // Współczynnik tarcia
+#define MEMORY_FACTOR 2        // Współczynnik pamięci prędkości
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+void update_velocity_and_speed_in_x(data *d) {
+    float g = 9.81; // Przybliżenie przyspieszenia ziemskiego w m/s²
 
-void manageVehicleControl(data *d) {
-    const float MAX_ERPM_BASE = 10000;
-    const float SPEED_FACTOR = 0.1;
-    const float ACCEL_FACTOR = 50;
-    const float MAX_GYRO_Y = 100.0;
-    const float MAX_ACCEL = 3.0;
-    const float BRAKE_FORCE = 0.8;
-    const float DUTY_CYCLE_REDUCTION_FACTOR = 0.9;
 
-    int rpm = VESC_IF->mc_get_rpm();
+    // Obliczenie zmiany prędkości na podstawie przyspieszenia w wymiarze x
+    float delta_velocity_x = d->rt.accel[0] * g * d->rt.diff_time;
 
-    float max_erpm_dynamic = MAX_ERPM_BASE + d->motor.acceleration * ACCEL_FACTOR + d->motor.current_avg * SPEED_FACTOR;
+    // Aktualizacja prędkości w wymiarze x
+    d->rt.velocity[0] += delta_velocity_x;
 
-    if (d->state.wheelslip > 0) {
-        max_erpm_dynamic *= 0.8;
+    // Zastosowanie tarcia, jeśli brak ruchu
+    if (fabs(d->rt.accel[0]) < 0.001) { // Jeśli przyspieszenie jest bliskie zeru
+        d->rt.velocity[0] *= (1.0 - FRICTION_COEFFICIENT); // Zastosowanie tarcia
     }
 
-    float resultant_acceleration = calculateResultantAcceleration(d->accelxyz[0], d->accelxyz[1]);
+    // Obliczenie całkowitej prędkości (wektorowej) w jednej płaszczyźnie (tylko x)
+    d->rt.speed = fabs(d->rt.velocity[0]); // Użyj fabs aby uzyskać wartość bezwzględną prędkości
 
-    bool isSlipping = (abs(d->gyroxyz[1]) > MAX_GYRO_Y || resultant_acceleration > MAX_ACCEL);
-    
-    if (isSlipping) {
-        set_current(d, BRAKE_FORCE);
-        float new_duty_cycle = d->motor.duty_cycle * DUTY_CYCLE_REDUCTION_FACTOR;
-        set_dutycycle(d, new_duty_cycle);
-    } else {
-        set_current(d, 0);
-        
-        if (d->motor.abs_erpm > max_erpm_dynamic) {
-            float new_duty_cycle = d->motor.duty_cycle * DUTY_CYCLE_REDUCTION_FACTOR;
-            set_dutycycle(d, new_duty_cycle);
-        }
-    }
+    // Aktualizacja wartości prędkości z pamięcią
+    d->rt.velocity[0] *= MEMORY_FACTOR;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,10 +63,10 @@ static void thd(void *arg)
 		d->rt.diff_time = d->rt.current_time - d->rt.last_time;
 		d->rt.last_time = d->rt.current_time;
 		
-		VESC_IF->imu_get_gyro(d->rt.gyroxyz);
-		VESC_IF->imu_get_accel(d->rt.accelxyz);
+		VESC_IF->imu_get_gyro(d->rt.gyro);
+		VESC_IF->imu_get_accel(d->rt.accel);
 
-        manageVehicleControl(d);
+        update_velocity_and_speed_in_x(d);
 
         VESC_IF->sleep_ms(10);
     }
@@ -91,33 +79,28 @@ static float app_get_debug(int index) {
 
     switch (index) {
     case (1):
-        return d->current_time;
+        return d->rt.current_time;
     case (2):
-        return d->gyroxyz[0];
+        return d->rt.gyro[0];
     case (3):
-        return d->gyroxyz[1];
+        return d->rt.gyro[1];
     case (4):
-        return d->gyroxyz[2];
+        return d->rt.gyro[2];
     case (5):
-        return d->accelxyz[0];
+        return d->rt.accel[0];
     case (6):
-        return d->accelxyz[1];
+        return d->rt.accel[1];
     case (7):
-        return d->accelxyz[2];
+        return d->rt.accel[2];
     case (8):
-        return d->motor.duty_cycle;
+        return d->rt.speed;
     case (9):
-        return d->motor.current;
+        return d->rt.speed_kmh;
     case (10):
-        return d->motor.braking;
+        return d->rt.velocity[0];
     case (11):
-        return d->motor.abs_erpm; 
-    case (12):
-        return d->motor.acceleration;
-    case (13):
-        return d->motor.current_avg;
-    case (14):
-        return d->state.wheelslip;
+        return d->rt.velocity[2];
+    
 
     default:
         return 0;

@@ -9,20 +9,12 @@ typedef struct {
 
 	float current_time, diff_time, last_time;
 
-	float gyroxyz[3];
-	float accelxyz[3];
+	float gyro[3];
+	float accel[3];
+	float velocity[3];
+	float speed;
+	float speed_kmh;
 
 } RuntimeData; 
-
-typedef enum {
-    STATE_DISABLED = 0,
-    STATE_STARTUP = 1,
-    STATE_READY = 2,
-    STATE_RUNNING = 3
-} RunState;
-
-typedef struct { 
-	RunState state;
-} State;
 
 #endif // DATATYPES_H_
